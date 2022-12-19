@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!-- index.html -->
+<html>
+
+<head>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script src="https://unpkg.com/jquery.terminal/js/jquery.terminal.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/jquery.terminal/css/jquery.terminal.min.css" />
+  <link rel="stylesheet" href="html/terminal.css" />
+  <script type="module">
+    const PROMPT_TEXT = '$ '
+    // for browsers that don't support key property
+    var pre = $('pre');
+    function info() {
+      var output;
+      var xhr= new XMLHttpRequest();
+      xhr.open('GET', 'content/info', false);
+      xhr.onload = function() { 
+        if (this.readyState!==4) return;
+        output = this.responseText; 
+      };
+      xhr.send();
+      
+      return output;
+    }
+    pre.html(info());
+    var body = $('body');
+    function scroll_to_bottom() {
+      var sHeight = body.prop('scrollHeight');
+      body.scrollTop(sHeight);
+    }
+
+    var cmd = $('#some_id').cmd({
+      prompt: PROMPT_TEXT,
+      width: '100%',
+      commands: (async(command) =>{
+        
+        switch(command){
+          case 'clear':
+            pre.html('');
+            scroll_to_bottom();
+            break;
+          case 'info':
+            html = pre.html()
+            pre.html(html + PROMPT_TEXT + 'info' + '\n' + info());
+            break;
+          default:
+            var html = pre.html();
+            if (html) { html += '\n'; }
+            
+            var message = "";
+            var importObject = { imports: { imported_func: arg => console.log(arg) }};
+
+            WebAssembly.instantiateStreaming(fetch("wasm/parse_and_run.wasm"), importObject).then(
+              obj => {
+                function string_fetch(offset, length) 
+                {
+                  // view the bytes
+                  let view = new Uint8Array(obj.instance.exports.memory.buffer, offset, length); 
+
+                  // convert the UTF-8 bytes to a string
+                  let string = new TextDecoder().decode(view);
+
+                  // use
+                  return string;
+                }
+                // convert to a byte array
+                let string_bytes = new TextEncoder().encode(command);
+
+                // inform the C++ side that some strings are going to be transferred
+                obj.instance.exports['string_start_js']();
+                
+                // ensure enough memory in the C side
+                let string_offset = obj.instance.exports['string_ensure'](string_bytes.byteLength)
+
+                // handle the out of memory
+                if (string_offset == 0) throw "oops...";
+
+                // have view of the instance of memory
+                let view = new Uint8Array(obj.instance.exports.memory.buffer, string_offset, string_bytes.byteLength);
+
+                // copy the string bytes to the memory
+                view.set(string_bytes);
+
+                let result_length = obj.instance.exports['string_handle'](string_bytes.byteLength);
+                
+                string_offset = obj.instance.exports['string_ensure'](result_length)
+
+                message = string_fetch(string_offset, result_length);
+
+                pre.html(html + PROMPT_TEXT + command + '\n' + message);
+                scroll_to_bottom();
+
+                // clear the used buffer
+                obj.instance.exports['string_clear']();
+              });
+            break;
+        }
+      })
+    });  
+  </script>
+</head>
+
+<body>
+  <pre></pre>
+  <div id="some_id"></div>
+</body>
+
+</html>
