@@ -11,6 +11,11 @@ extern void string_final_cpp(void);
 extern void string_fetch(char *pointer, int length);
 
 int run_command(){
+    char temp[14] = "Hello from C!";
+    for(int i =0; i < 14; i++){
+        string_buffer[i] = temp[i];
+    }
+    string_length = 14;
     return string_length;
 }
 
