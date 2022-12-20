@@ -11,37 +11,23 @@
     const PROMPT_TEXT = '$ '
     // for browsers that don't support key property
     var pre = $('pre');
-    function info() {
-      var output;
-      var xhr= new XMLHttpRequest();
-      xhr.open('GET', 'content/info.html', false);
-      xhr.onload = function() { 
-        if (this.readyState!==4) return;
-        output = this.responseText; 
-      };
-      xhr.send();
-      
-      return output;
-    }
-    function links() {
-      var output;
-      var xhr= new XMLHttpRequest();
-      xhr.open('GET', 'content/links.html', false);
-      xhr.onload = function() { 
-        if (this.readyState!==4) return;
-        output = this.responseText; 
-      };
-      xhr.send();
-      
-      return output;
-    }
-    pre.html(info());
     var body = $('body');
     function scroll_to_bottom() {
       var sHeight = pre.prop('scrollHeight');
       pre.scrollTop(sHeight);
     }
-
+    function read_from_file_command(command){
+      var html = pre.html();
+      var xhr= new XMLHttpRequest();
+      xhr.open('GET', 'content/'+command+'.html', false);
+      xhr.onload = function() { 
+        if (this.readyState!==4) return;
+        pre.html(html + PROMPT_TEXT + command + '\n' + this.responseText);
+      };
+      xhr.send();
+      scroll_to_bottom();
+    }
+    pre.html(read_from_file_command('info'));
     var cmd = $('#some_id').cmd({
       prompt: PROMPT_TEXT,
       width: '100%',
@@ -55,15 +41,9 @@
             scroll_to_bottom();
             break;
           case 'links':
-            html = pre.html();
-            pre.html(html + PROMPT_TEXT + 'links' + '\n' + links());
-            scroll_to_bottom();
-            break;
-            break;
+          case 'help':
           case 'info':
-            html = pre.html();
-            pre.html(html + PROMPT_TEXT + 'info' + '\n' + info());
-            scroll_to_bottom();
+            read_from_file_command(command);
             break;
           default:
             var html = pre.html();
