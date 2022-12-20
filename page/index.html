@@ -14,7 +14,19 @@
     function info() {
       var output;
       var xhr= new XMLHttpRequest();
-      xhr.open('GET', 'content/info', false);
+      xhr.open('GET', 'content/info.html', false);
+      xhr.onload = function() { 
+        if (this.readyState!==4) return;
+        output = this.responseText; 
+      };
+      xhr.send();
+      
+      return output;
+    }
+    function links() {
+      var output;
+      var xhr= new XMLHttpRequest();
+      xhr.open('GET', 'content/links.html', false);
       xhr.onload = function() { 
         if (this.readyState!==4) return;
         output = this.responseText; 
@@ -26,27 +38,35 @@
     pre.html(info());
     var body = $('body');
     function scroll_to_bottom() {
-      var sHeight = body.prop('scrollHeight');
-      body.scrollTop(sHeight);
+      var sHeight = pre.prop('scrollHeight');
+      pre.scrollTop(sHeight);
     }
 
     var cmd = $('#some_id').cmd({
       prompt: PROMPT_TEXT,
       width: '100%',
       commands: (async(command) =>{
-        
         switch(command){
+          case '':
+            pre.html(pre.html() + PROMPT_TEXT + '\n')
+            break;
           case 'clear':
             pre.html('');
             scroll_to_bottom();
             break;
+          case 'links':
+            html = pre.html();
+            pre.html(html + PROMPT_TEXT + 'links' + '\n' + links());
+            scroll_to_bottom();
+            break;
+            break;
           case 'info':
-            html = pre.html()
+            html = pre.html();
             pre.html(html + PROMPT_TEXT + 'info' + '\n' + info());
+            scroll_to_bottom();
             break;
           default:
             var html = pre.html();
-            if (html) { html += '\n'; }
             
             var message = "";
             var importObject = { imports: { imported_func: arg => console.log(arg) }};
@@ -88,7 +108,7 @@
 
                 message = string_fetch(string_offset, result_length);
 
-                pre.html(html + PROMPT_TEXT + command + '\n' + message);
+                pre.html(html + PROMPT_TEXT + command + '\n' + message + '\n');
                 scroll_to_bottom();
 
                 // clear the used buffer
